@@ -1,0 +1,332 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+
+  <title>Wav text to speech</title>
+   <script src='js/thaicut_w2s3.js'> </script>
+   <script src='js/wav1.js'> </script>
+   <script src="js/toastr.min.js"></script>
+	<link rel="stylesheet" href="./css/toastr.min.css">
+
+</head>
+
+<body>
+<div id="snackbar"></div>
+<div align="center">
+	  <h3>Place Text need to speak</h3 <br/><br/>
+     <textarea id="text-input" rows="10" cols="120"></textarea><br>
+	<button onclick="convertNow();">Convert</button>
+</div>
+<div align="center">
+	<textarea id="text-output" rows="10" cols="120"></textarea><br>
+	<button onclick="speakNow();">speak</button>
+	<button onclick="cleanNow();">Claen Monitor</button><br>
+	<label for="filterType">Filter</label>
+	<select id ="filterType">
+	<option value="lowpass" selected>lowpass</option>
+	<option value="highpass">highpass</option>
+	<option value="bandpass">bandpass</option>
+	<option value="lowshelf">lowshelf</option>
+	<option value="highshelf">highshelf</option>
+	<option value="peaking">peaking</option>
+	<option value="notch">notch</option>
+	<option value="allpass">allpass</option>
+</select><br>
+	<label for="Speed">Speed</label>
+	<input name="Speed" id="Speed" type="range" min="0.5" max="1.5" value="1" step="0.1" /><spand id ="SpeedValue"> 1.0 </span>
+</div>
+<div align="center">
+	<textarea id="text-monitor" rows="10" cols="120"></textarea><br>
+</div>
+
+</body>
+<script>
+
+//gobal variable
+var ctlcom = ['g','gr','gl','gw','kh','kh','kh','khr','khl','khw','kh','kh','ng','j','ch','ch','s','ch','y','d','dt','th','th','th','n','d','dr','dt','dtr','th','th','thr','th','n','b','br','bl','bp','bpr','bpl','ph','phr','phl','f','ph','phr','phl','f','fr','fl','ph','phr','phl','m','y','r','l','w','s','sr','s','sr','s','sr','h','l','','h'];
+var vtlcom = ['a','a','a','aa','am','i','ee','eu','euu','oo','uu','aeh','aae','o:','ai','ai','aaw','uaa','ua','eeuy','e','e','uh','uuhr','eer','ao','ia','iia','eua','euua','euu','ae','ae','oh','aw','ai','ai','aai','aawy','aaw','uaa','iaao','euuay','aao','uuay','aayo','aaeo','ooy','iu','uy','eo','uay'];
+var ftlcom = ['k','','','','k','k','k','k','k','ng','t','','t','t','','','t','t','t','t','t','t','t','t','t','t','t','t','t','t','ng','p','','','p','','','','','','','p','','','p','','','p','','','m','y','n','n','v','t','','t','','t','','','n','',''];
+var ttlcom = ['M','L','F','H','R'];
+var cindx = ['g','gr','gl','gv','c','c','c','cr','cl','cv','c','c','ng','j','ch','ch','s','ch','y','d','th','t','t','t','n','d','dr','th','thr','t','tr','t','t','n','b','br','bl','p','pr','pl','ph','phr','phl','f','ph','phr','phl','f','fr','fl','ph','phr','phl','m','y','r','l','v','s','sr','s','sr','s','sr','h','l','','h']; 
+var vindx = ['no','no','no','a','no','ee','ee','eu','eu','ua','ua','a','ae','o','no','no','or','u','ua','or','a','a','er','er','er','no','a','no','eua','eu','eu','ae','ae','or','or','no','no','ar','or','or','u','no','oua','no','no','no','no','no','no','no','no','no'];
+var csound = ['h_g--.wav','h_g--.wav:a_no_gr-.wav','h_g--.wav:a_no_gl-.wav','h_g--.wav:a_no_gv-.wav','h_c--.wav','h_c--.wav','h_c--.wav','h_c--.wav:a_no_cr-.wav','h_c--.wav:a_no_cl-.wav','h_c--.wav:a_no_cv-.wav','h_c--.wav','h_c--.wav','h_ng--.wav','h_j--.wav','h_ch--.wav','h_ch--.wav','h_s--.wav','h_ch--.wav','h_y--.wav','h_d--.wav','h_th--.wav','h_t--.wav','h_t--.wav','h_t--.wav','h_n--.wav','h_d--.wav','h_d--.wav:a_no_dr-.wav','h_th--.wav','h_th--.wav:a_no_thr-.wav','h_t--.wav','h_t--.wav:a_no_tr-.wav','h_ch--.wav','h_t--.wav','h_n--.wav','h_b--.wav','h_b--.wav:a_no_br-.wav','h_b--.wav:a_no_bl-.wav','h_b--.wav:a_no_p-.wav','h_b--.wav:a_no_pr-.wav','h_b--.wav:a_no_pl-.wav','h_ph--.wav','h_ph--.wav:a_no_phr-.wav','h_ph--.wav:a_no_phl-.wav','h_f--.wav','h_ph--.wav','h_ph--.wav:a_no_phr-.wav','h_ph--.wav:a_no_phl-.wav','h_f--.wav','h_f--.wav:a_no_fr-.wav','h_f--.wav:a_no_fl-.wav','h_ph--.wav','h_ph--.wav:a_no_phr-.wav','h_ph--.wav:a_no_phl-.wav','h_m--.wav','h_y--.wav','h_r--.wav','h_l--.wav','h_v--.wav','h_s--.wav','h_s--.wav:a_no_sr-.wav','h_s--.wav','h_s--.wav:a_no_sr-.wav','h_s--.wav','h_s--.wav:a_no_sr-.wav','h_h--.wav','h_l--.wav','','h_h--.wav'];
+var vsound = ['a_no_ar-.wav','a_no_ar-.wav','a_no_[C]-.wav','v_-ar-.wav','a_no_m-.wav','a_ee_[C]-.wav','v_-ee-.wav','a_eu_[C]-.wav','v_-eu-.wav','a_ua_[C]-.wav','v_-ua-.wav','v_-a-.wav','v_-ae-.wav','v_-o-.wav','a_no_y-.wav','a_no_y-.wav','v_-or-.wav','v_-u-.wav:a_o-.wav','a_ua_[C]-.wav:a_o-.wav','a_or_y-.wav','a_a_[C]-.wav','a_a_[C]-.wav','a_er_[C]-.wav','v_-er-.wav','v_-er-.wav','a_v-.wav','v_a_[C]-.wav:a_no_ae-.wav','v_-ee-.wav:a_no_ae-.wav','a_eua_[C]-.wav:a_ae-.wav','a_eu_[C]-.wav:v_-eu-.wav:a_ae-.wav','v_-eu-.wav','a_ae_[C]-.wav','a_ae_[C]-.wav','a_or_[C]-.wav','a_or_[C]-.wav','a_no_y-.wav','a_no_y-.wav','v_-ar-.wav:a_a_y-.wav','v_-or-.wav:a_or_y-.wav','v_-or-.wav','v_-u-.wav','v_-a-.wav:a_ae_v-.wav','v_-oua-.wav:a_no_y-.wav','v_-ar-.wav:a_or_v-.wav','v_-ua-.wav:a_ua_y-.wav','v_-a-.wav:a_a_v-.wav','v_-ae-.wav:a_ae_v-.wav','v_-o-.wav:a_a_y-.wav','v_-ee-.wav:a_ee_v-.wav','v_-u-.wav:a_u_y-.wav','v_-a-.wav:a_a_v-.wav','v_-u-.wav:a_no_y-.wav'];
+var fsound = ['b_[V]_-g.wav','','','','b_[V]_-g.wav','b_[V]_-g.wav','b_[V]_-g.wav','b_[V]_-g.wav','b_[V]_-g.wav','t_[V]_--ng.wav','b_[V]_-d.wav','','b_[V]_-d.wav','b_[V]_-d.wav','','t_no_--n.wav','b_[V]_-d.wav','b_[V]_-d.wav','b_[V]_-d.wav','b_[V]_-d.wav','b_[V]_-d.wav','t_no_--n.wav','b_[V]_-d.wav','','b_[V]_-d.wav','b_[V]_-d.wav','b_[V]_-d.wav','b_[V]_-d.wav','','b_[V]_-d.wav','t_no_--n.wav','b_[V]_-p.wav','','','b_[V]_-p.wav','','','','','','','b_[V]_-p.wav','','','b_[V]_-p.wav','','','b_[V]_-p.wav','','','t_no_--m.wav','a_[V]_y-.wav','t_no_--n.wav','t_no_--n.wav','a_[V]_v-.wav','b_[V]_-d.wav','','b_[V]_-d.wav','','b_[V]_-d.wav','','','t_no_--n.wav','',''];
+
+//['M','L','H','F','R']
+
+//var tone0=[1,1,1.1,1,1.2];
+//var tone1=[1,1,1.2,1,0.8];
+//var tone2=[1,0.95,1.2,1,0.9];
+//var tone3=[1,0.9,1.1,1.2,1];
+//var tone4=[1,0.85,1,1.2,1];
+//var tone5=[1,0.83,0.95,1.4,1.2];
+//var tone6=[1,0.8,0.9,1.4,1.4];
+//var tone7=[1,0.8,0.85,1.2,1.6];
+//var tone8=[1,0.8,0.8,1.2,1.8];
+var tone0=[1,1,1.2,1,1.2];
+var tone1=[1,1,1,1,0.8];
+var tone2=[1,0.95,1.2,1,0.9];
+var tone3=[1,0.9,1.1,1.2,1];
+var tone4=[1,0.85,1,1.2,1];
+var tone5=[1,0.83,0.95,1.2,1.2];
+var tone6=[1,0.8,0.9,1,1.3];
+var tone7=[1,0.8,0.85,0.5,1.4];
+var tone8=[1,0.8,0.8,0.5,1.5];
+
+var xaudioBuffer = null;
+var kspeed = 1;
+
+//var filterSet = [ 'lowpass','highpass', 'bandpass', 'lowshelf', 'highshelf', 'peaking', 'notch' ,'allpass'];
+var kfilter = 'lowpass';
+
+
+// Fix up prefixing
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
+var context = new AudioContext();
+
+loadSound("soundwav1.mp3");
+
+function loadSound(url) {
+	var context = new AudioContext();
+  var request = new XMLHttpRequest();
+  request.open('GET', url, true);
+  request.responseType = 'arraybuffer';
+
+  // Decode asynchronously
+  request.onload = function() {
+    context.decodeAudioData(request.response, function(buffer) {
+      xaudioBuffer = buffer;
+    }, onError);
+  }
+  request.send();
+
+}
+
+var filterTypeControl = document.getElementById('filterType');
+filterTypeControl.addEventListener("change", function() {
+	kfilter = this.options[this.selectedIndex].text;
+});
+
+var SpeedControl = document.getElementById('Speed');
+	SpeedControl.addEventListener('input', function() {
+    kspeed = Number(this.value);
+	document.getElementById('SpeedValue').innerHTML = kspeed.toFixed(1);
+}, false);
+
+function convertNow(){
+	var ucut  = numreplace_rule(document.getElementById("text-input").value);
+	document.getElementById("text-output").value = thaicut(ucut).join("|");
+}	
+function cleanNow(){
+	document.getElementById("text-monitor").value = "";
+}	
+
+
+// log if an error occurs
+function onError(e) {
+	console.log(e);
+}
+function speakNow(){
+	var wordseries = [];
+	var sayword = "";
+	var textArr = document.getElementById("text-output").value.split("|");
+	for (var i = 0; i < textArr.length; i++) {
+		  if ( textArr[i].includes("-")) {
+		  var sayArr = textArr[i].split("-");
+		  var cinx = ctlcom.indexOf(sayArr[0]);
+		  var _c = cindx[cinx] || "";
+		  _c = _c.replace("ar","no");
+		  var con = csound[cinx] || "";
+		  con = (con !=="") ? con.replace(":",",") + ",": "";
+		  var vinx = vtlcom.indexOf(sayArr[1]);
+		  var _v = vindx[vinx] || "";
+		  var vow = vsound[vinx] || "";
+		  //alert(sayArr[1] +":" + vinx +":" + _v +":" + vow);
+		  vow = (vow !=="") ? vow.replace(":",",") + ",": "";
+		  var fin = fsound[ftlcom.indexOf(sayArr[2])] || "";
+		  //alert(sayArr[2] +":" + ftlcom.indexOf(sayArr[2]) +":" + fin);
+		  fin = fin.replace(":",",");	  
+		  if (fin !=="" && vow.indexOf("a_no_-ar.wav") > -1) {
+			vow = vow.replace("a_no_-ar.wav","a_no_[C]-.wav");  
+		  }
+		  sayword = con + vow + fin;
+		  //alert("b4 sayword :" + sayword);
+		  if (_c !=="") {
+			sayword = sayword.replace(/\[C\]/gi,_c).replace(/\[V\]/gi,_v);
+		  } else {
+			var retext = "a_" + _v + "_[C]-";
+			sayword = sayword.replace(retext,"a_no_" +_v +"-");
+
+		  } 
+		  if(sayword.slice(-1) == ",") {sayword = sayword.substring(0, sayword.length - 1)};
+		  //alert("sayword :" + sayword);
+		  var playseries = "";
+		  var durseries = "";
+		  var playArr = sayword.split(",");
+		  for (var ii = 0; ii < playArr.length; ii++) {
+			  var tmpplay = soundstart[soundwav.indexOf(playArr[ii])];
+			  var tmpdur = sounddur[soundwav.indexOf(playArr[ii])];
+			 if (tmpplay) {
+					playseries += tmpplay;
+					playseries += ",";
+			 } 
+			 if (tmpdur) {
+					durseries += tmpdur;
+					durseries += ",";
+			 } 
+		}
+		  playseries = playseries.substring(0, playseries.length - 1);
+		  durseries = durseries.substring(0, durseries.length - 1);
+		  //alert("playseries :" + playseries);
+		  //alert("durseries :" + durseries);
+		  
+		  var toneindx = ['M','L','H','F','R'].indexOf(sayArr[3]) || 0;
+		  var valueToPush = { };
+			valueToPush.ipa = textArr[i];
+			valueToPush.playseries = playseries;
+			valueToPush.durseries = durseries;
+			valueToPush.tone = toneindx;
+			wordseries.push(valueToPush);  
+
+		  } else {
+		  	var valueToPush = { };
+			valueToPush.ipa = textArr[i];
+			valueToPush.playseries = "115.81125,115.81125,115.81125,115.81125";
+			valueToPush.durseries = "0.02,0.02,0.02,0.02";
+			valueToPush.tone = 0;
+			wordseries.push(valueToPush); 	
+		  }
+		
+		}
+		//alert(JSON.stringify(wordseries));
+		var success = playSound(wordseries,0);
+		
+}  
+
+function sleep(millis)
+	{
+		var date = new Date();
+		var curDate = null;
+		do { curDate = new Date(); }
+		while(curDate-date < millis);
+	}
+
+ function playSound(wordArr,indx) //_callback
+ {
+
+
+  if(indx < wordArr.length) {  
+	//showToast(wordArr[indx].ipa);		
+		var showtext = wordArr[indx].ipa || "";
+		document.getElementById("text-monitor").value += showtext + "|";
+  
+		var pArr = wordArr[indx].playseries.split(",");
+		var dArr = wordArr[indx].durseries.split(",");
+		var tonedur = 0;
+			for (var d = 0; d < dArr.length; d++) {
+			 tonedur += parseFloat(dArr[d]);
+			}
+		//alert(tonedur);
+		var tone = wordArr[indx].tone;
+		var waveArray = new Float32Array(9);
+		waveArray[0] = tone0[tone]* kspeed;
+		waveArray[1] = tone1[tone]* kspeed;
+		waveArray[2] = tone2[tone]* kspeed;
+		waveArray[3] = tone3[tone]* kspeed;
+		waveArray[4] = tone4[tone]* kspeed;
+		waveArray[5] = tone5[tone]* kspeed;
+		waveArray[6] = tone6[tone]* kspeed;
+		waveArray[7] = tone7[tone]* kspeed;
+		waveArray[8] = tone8[tone]* kspeed;
+		//var chunk = genChunk(xaudioBuffer, pArr, dArr);
+		genChunk(xaudioBuffer, pArr, dArr, function(chunk){
+			if(chunk.duration > 0) {
+				//var source = context.createBufferSource(chunk.numberOfChannels,chunk.duration * chunk.sampleRate,chunk.sampleRate);
+				var source = context.createBufferSource();
+				source.buffer = chunk;
+				//alert(JSON.stringify(wordArr[indx]));
+				//var filter = context.createBiquadFilter();
+				//filter.type = kfilter;
+				//filter.frequency.value = 440;
+				//filter.Q.value = 100;
+				//filter.gain.value = 50;
+				//source.connect(filter);
+				source.connect(context.destination);
+				source.start(0);
+				source.playbackRate.setValueCurveAtTime(waveArray, context.currentTime, tonedur);
+				source.onended = function() {
+				//sleep(200);
+				var success = playSound(wordArr,indx+1);
+				};
+				//source.start(0);
+				return false;
+		  } else {
+		  //sleep(200);
+			var success = playSound(wordArr,indx+1);
+		  }
+		  
+		});
+	 } else {
+		return true;
+	 }
+ }
+ 
+ function genChunk(buffer, begin, dur , _callback) { // begin, end in array of second
+  var audioContext = new AudioContext();
+  var duration = buffer.duration;
+  var channels = buffer.numberOfChannels;
+  var rate = buffer.sampleRate;
+
+  var chunkBuffers = [];
+	for (var i = 0; i < begin.length; i++) {
+		
+	  var startOffset = rate * parseFloat(begin[i]);
+	  var endOffset = rate * (parseFloat(begin[i])+parseFloat(dur[i]));
+	  var frameCount = endOffset - startOffset;
+	  var newArrayBuffer;
+
+	 try {
+		newArrayBuffer = audioContext.createBuffer(channels, endOffset - startOffset, rate);
+		var anotherArray = new Float32Array(frameCount);
+		// Copy channel data from second channel of myArrayBuffer.
+		for (var channel = 0; channel < channels; channel++) {
+		buffer.copyFromChannel(anotherArray,channel,parseInt(startOffset));
+		  newArrayBuffer.copyToChannel(anotherArray, channel, 0);
+		}
+		chunkBuffers.push(newArrayBuffer);
+		
+	  } catch(e) {
+		console.log(e);
+	  }
+	  
+	}
+	appendBuffer(chunkBuffers, function(tbuf){ 
+		_callback(tbuf);
+	});
+
+}
+ 
+function appendBuffer(buffers, _callback) {
+	var audioContext = new AudioContext();
+    var tmp = audioContext.createBuffer( buffers[0].numberOfChannels, totalLength(buffers), buffers[0].sampleRate );
+    for (var i=0; i<buffers[0].numberOfChannels; i++) {
+	  offset = 0;
+	  for (var j=0; j<buffers.length; j++) {
+      tmp.getChannelData(i).set( buffers[j].getChannelData(i), offset);
+      offset += buffers[j].length;
+	  }
+    }
+    _callback(tmp);
+  }
+ 
+function totalLength(buffers) {
+    return buffers.map(buffer => buffer.length).reduce((a, b) => a + b, 0);
+}
+   
+
+</script>
+</htl>

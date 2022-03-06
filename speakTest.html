@@ -1,0 +1,351 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+
+  <title>Wav text to speech</title>
+   <script src='js/crunker2.js'> </script>
+   <script src='js/wav1.js'> </script>
+
+</head>
+
+<body>
+
+<div align="center">
+	  <h3>0. Create mix voice file</h3 <br/><br/>
+	 Head: <select id="csel"><option></option></select><br/>
+	 sconv: <select id="scsel"><option></option></select><br/>
+	 Vowel: <select id="vsel"><option></option></select><br/>
+	 sconv2: <select id="scsel2"><option></option></select><br/>
+	 svowel: <select id="svsel"><option></option></select><br/>
+	 Tone: <select id="tsel"><option></option></select><br/>
+	 Tail: <select id="fsel"><option></option></select><br/>
+	 <br/>
+
+	 <button onclick="play0();">play0</button><button onclick="play1();">play1</button>
+	 <button onclick="play2();">play2</button><button onclick="play3();">play3</button>
+	 <button onclick="play4();">play4</button><br>
+</div>
+<div>
+	<label for="filterType">Filter</label>
+	<select id ="filterType">
+	<option value="lowpass" selected>lowpass</option>
+	<option value="highpass">highpass</option>
+	<option value="bandpass">bandpass</option>
+	<option value="lowshelf">lowshelf</option>
+	<option value="highshelf">highshelf</option>
+	<option value="peaking">peaking</option>
+	<option value="notch">notch</option>
+	<option value="allpass">allpass</option>
+</select><br>
+	<!--
+	<label for="Freq">Freq</label>
+	<input name="Freq" id="Freq" type="range" min="20" max="20000" value="440" step="20" />
+-->
+	<label for="factor">Q-factor</label>
+	<input name="Qfactor" id="Qfactor" type="range" min="0" max="100" value="50" step="10" />
+
+	<label for="Gain">Gain</label>
+	<input name="Gain" id="Gain" type="range" min="-50" max="50" value="0" step="5" />
+
+	<label for="Speed">Speed</label>
+	<input name="Speed" id="Speed" type="range" min="0.1" max="3" value="1" step="0.1" />
+
+</div>
+<img src="img/ttsmap.png"><br>
+<img src="img/ttscon.png">
+</body>
+<script>
+
+var filterTypeControl = document.getElementById('filterType');
+filterTypeControl.addEventListener("change", function() {
+	filter.type = this.options[this.selectedIndex].text;
+});
+/*
+var FreqControl = document.getElementById('Freq');
+	FreqControl.addEventListener('input', function() {
+    filter.frequency.value = Number(this.value);
+}, false);
+*/
+var SpeedControl = document.getElementById('Speed');
+	SpeedControl.addEventListener('input', function() {
+    //sourceNode.playbackRate.value = Number(this.value);
+	kspeed = Number(this.value);
+}, false);
+
+
+var QfactorControl = document.getElementById('Qfactor');
+	QfactorControl.addEventListener('input', function() {
+    filter.Q.value = Number(this.value);
+}, false);
+var GainControl = document.getElementById('Gain');
+	GainControl.addEventListener('input', function() {
+    filter.gain.value = Number(this.value);
+}, false);
+
+//gloval variable
+//var tone0=[1,1,1.1,1,1.2];
+//var tone1=[1,1,1.2,1,0.8];
+//var tone2=[1,0.95,1.2,1,0.9];
+//var tone3=[1,0.9,1.1,1.2,1];
+//var tone4=[1,0.85,1,1.2,1];
+//var tone5=[1,0.83,0.95,1.4,1.2];
+//var tone6=[1,0.8,0.9,1.4,1.4];
+//var tone7=[1,0.8,0.85,1.2,1.6];
+//var tone8=[1,0.8,0.8,1.2,1.8];
+var sayword = { };
+var tone0=[1,1,1.2,1,1.2];
+var tone1=[1,1,1,1,0.8];
+var tone2=[1,0.95,1.2,1,0.9];
+var tone3=[1,0.9,1.1,1.2,1];
+var tone4=[1,0.85,1,1.2,1];
+var tone5=[1,0.83,0.95,1.2,1.2];
+var tone6=[1,0.8,0.9,1,1.3];
+var tone7=[1,0.8,0.85,0.5,1.4];
+var tone8=[1,0.8,0.8,0.5,1.5];
+
+
+
+// Fix up prefixing
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
+var context = new AudioContext();
+var audioBuffer;
+var sourceNode;
+var mediaStreamSource;
+
+navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+
+loadSound("soundwav1.mp3");
+
+
+var xaudioBuffer = null;
+var kspeed = 1; //normal speed
+//var osc = context.createOscillator();
+
+var filterSet = [ 'lowpass','highpass', 'bandpass', 'lowshelf', 'highshelf', 'peaking', 'notch' ,'allpass'];
+    var filter = context.createBiquadFilter();
+    filter.type = filterSet[3];
+    filter.frequency.value = 440;
+    filter.Q.value = 0;
+    filter.gain.value = 0;
+
+
+function playSound(aword, tone) //_callback
+ {
+		//alert(JSON.stringify(aword));
+		//var showtext = aword.ipa || "";
+		//document.getElementById("text-monitor").value += showtext + "|";
+  
+		var pArr = aword.playseries.split(",");
+		var dArr = aword.durseries.split(",");
+		var tonedur = 0;
+			for (var d = 0; d < dArr.length; d++) {
+			 tonedur += parseFloat(dArr[d]);
+			}
+		var waveArray = new Float32Array(9);
+		waveArray[0] = tone0[tone]* kspeed;
+		waveArray[1] = tone1[tone]* kspeed;
+		waveArray[2] = tone2[tone]* kspeed;
+		waveArray[3] = tone3[tone]* kspeed;
+		waveArray[4] = tone4[tone]* kspeed;
+		waveArray[5] = tone5[tone]* kspeed;
+		waveArray[6] = tone6[tone]* kspeed;
+		waveArray[7] = tone7[tone]* kspeed;
+		waveArray[8] = tone8[tone]* kspeed;
+		//var chunk = genChunk(xaudioBuffer, pArr, dArr);
+		genChunk(xaudioBuffer, pArr, dArr, function(chunk){ 
+ 			if(chunk.duration > 0) {
+				//var source = context.createBufferSource(chunk.numberOfChannels,chunk.duration * chunk.sampleRate,chunk.sampleRate);
+				sourceNode = context.createBufferSource();
+				sourceNode.buffer = chunk;
+				sourceNode.connect(filter);
+				sourceNode.connect(context.destination);
+				sourceNode.start(0);
+				sourceNode.playbackRate.setValueCurveAtTime(waveArray, context.currentTime, tonedur);
+			} else {
+				alert("please select sound files");
+			}
+	});
+		
+ }
+ 
+function loadSound(url) {
+	var request = new XMLHttpRequest();
+	request.open('GET', url, true);
+	request.responseType = 'arraybuffer';
+
+	// When loaded decode the data
+	request.onload = function () {
+
+		// decode the data
+		context.decodeAudioData(request.response, function (buffer) {
+			// when the audio is decoded play the sound
+			xaudioBuffer = buffer;
+		}, onError);
+	}
+	request.send();
+}
+
+// log if an error occurs
+function onError(e) {
+	console.log(e);
+}
+
+
+function play0() {	//MIDDLE
+	genSound(function() {
+		playSound(sayword, 0)
+	}); 
+
+}
+function play1() { //LOW
+	genSound(function() {
+		playSound(sayword, 1);
+    }); 
+
+}
+function play2() { // FALLING
+	genSound(function() {
+		playSound(sayword, 2);
+    }); 
+
+}
+function play3() { // HIGH
+	genSound(function() {
+		playSound(sayword, 3);
+    }); 
+}
+function play4() { //RAISING
+	genSound(function() {
+		playSound(sayword, 4);
+    }); 
+}
+
+ function genSound(_callback) {
+	var sArr = ["zsil.wav","zsil.wav","zsil.wav","zsil.wav","zsil.wav","zsil.wav","zsil.wav","zsil.wav"];
+	var nvoice = 0;
+	var e = document.getElementById("csel");
+	var cfile = e.options[e.selectedIndex].text;
+	if (cfile !== "") {sArr[nvoice] = cfile; nvoice += 1;}
+	e = document.getElementById("scsel");
+	var scfile = e.options[e.selectedIndex].text;
+	if (scfile !== "") {sArr[nvoice] =  scfile; nvoice += 1;}
+	e = document.getElementById("vsel");
+	var vfile = e.options[e.selectedIndex].text;
+	if (vfile !== "") {sArr[nvoice] = vfile; nvoice += 1;}
+	e = document.getElementById("scsel2");
+	var scfile2 = e.options[e.selectedIndex].text;
+	if (scfile2 !== "") {sArr[nvoice] = scfile2; nvoice += 1;}
+	e = document.getElementById("svsel");
+	var svfile = e.options[e.selectedIndex].text;
+	if (svfile !== "") {sArr[nvoice] =  svfile; nvoice += 1;}
+	e = document.getElementById("tsel");
+	var tfile = e.options[e.selectedIndex].text;
+	if (tfile !== "") {sArr[nvoice] =  tfile; nvoice += 1;}
+	e = document.getElementById("fsel");
+	var ffile = e.options[e.selectedIndex].text;
+	if (ffile !== "") {sArr[nvoice] = ffile; nvoice += 1;}
+	
+	var playseries = "";
+	  var durseries = "";
+	  for (var ii = 0; ii < sArr.length; ii++) {
+		  var tmpplay = soundstart[soundwav.indexOf(sArr[ii])];
+		  var tmpdur = sounddur[soundwav.indexOf(sArr[ii])];
+		 if (tmpplay) {
+				playseries += tmpplay;
+				playseries += ",";
+		 } 
+		 if (tmpdur) {
+				durseries += tmpdur;
+				durseries += ",";
+		 } 
+	}
+	  playseries = playseries.substring(0, playseries.length - 1);
+	  durseries = durseries.substring(0, durseries.length - 1);  
+	  sayword = { };
+		sayword.ipa = sArr.join(",");
+		sayword.playseries = playseries;
+		sayword.durseries = durseries;
+		sayword.tone = 0;
+ 
+ _callback(); 
+ }
+
+
+ function genChunk(buffer, begin, dur, _callback) { // begin, end in array of second
+  var audioContext = new AudioContext();
+  var duration = buffer.duration;
+  var channels = buffer.numberOfChannels;
+  var rate = buffer.sampleRate;
+
+  var chunkBuffers = [];
+	for (var i = 0; i < begin.length; i++) {
+		
+	  var startOffset = rate * parseFloat(begin[i]);
+	  var endOffset = rate * (parseFloat(begin[i])+parseFloat(dur[i]));
+	  var frameCount = endOffset - startOffset;
+	  var newArrayBuffer;
+
+	 try {
+		newArrayBuffer = audioContext.createBuffer(channels, endOffset - startOffset, rate);
+		var anotherArray = new Float32Array(frameCount);
+		// Copy channel data from second channel of myArrayBuffer.
+		for (var channel = 0; channel < channels; channel++) {
+		buffer.copyFromChannel(anotherArray,channel,parseInt(startOffset));
+		  newArrayBuffer.copyToChannel(anotherArray, channel, 0);
+		}
+		chunkBuffers.push(newArrayBuffer);
+		
+	  } catch(e) {
+		console.log(e);
+	  }
+	  
+	}
+	appendBuffer(chunkBuffers, function(tbuf){ 
+		_callback(tbuf);
+	});
+	
+}
+ 
+function appendBuffer(buffers, _callback) {
+	var audioContext = new AudioContext();
+    var tmp = audioContext.createBuffer( buffers[0].numberOfChannels, totalLength(buffers), buffers[0].sampleRate );
+    for (var i=0; i<buffers[0].numberOfChannels; i++) {
+	  offset = 0;
+	  for (var j=0; j<buffers.length; j++) {
+      tmp.getChannelData(i).set( buffers[j].getChannelData(i), offset);
+      offset += buffers[j].length;
+	  }
+    }
+    _callback(tmp);
+  }
+ 
+function totalLength(buffers) {
+    return buffers.map(buffer => buffer.length).reduce((a, b) => a + b, 0);
+}
+
+function genSelect(selId,selOptArr) {
+ var select = document.getElementById(selId); 
+	for(var i = 0; i < selOptArr.length; i++) {
+		var opt = selOptArr[i];
+		var el = document.createElement("option");
+		el.textContent = opt;
+		el.value = opt;
+		select.appendChild(el);
+	}
+ }
+ 
+
+genSelect("csel",['h_b--.wav','h_c--.wav','h_ch--.wav','h_d--.wav','h_eng_s--.wav','h_f--.wav','h_g--.wav','h_h--.wav','h_j--.wav','h_l--.wav','h_m--.wav','h_n--.wav','h_ng--.wav','h_p--.wav','h_ph--.wav','h_r--.wav','h_s--.wav','h_t--.wav','h_th--.wav','h__s--.wav','h__t--.wav','h_v--.wav','h_y--.wav']);
+genSelect("scsel",['a_ae_b-.wav','a_ae_bl-.wav','a_ae_br-.wav','a_ae_c-.wav','a_ae_ch-.wav','a_ae_cl-.wav','a_ae_cr-.wav','a_ae_cv-.wav','a_ae_cw-.wav','a_ae_d-.wav','a_ae_dr-.wav','a_ae_eng_s-.wav','a_ae_f-.wav','a_ae_fl-.wav','a_ae_fr-.wav','a_ae_g-.wav','a_ae_gl-.wav','a_ae_gr-.wav','a_ae_gv-.wav','a_ae_gw-.wav','a_ae_h-.wav','a_ae_j-.wav','a_ae_l-.wav','a_ae_m-.wav','a_ae_n-.wav','a_ae_ng-.wav','a_ae_p-.wav','a_ae_ph-.wav','a_ae_phl-.wav','a_ae_phr-.wav','a_ae_pl-.wav','a_ae_pr-.wav','a_ae_r-.wav','a_ae_s-.wav','a_ae_sr-.wav','a_ae_t-.wav','a_ae_th-.wav','a_ae_thr-.wav','a_ae_tr-.wav','a_ae_v-.wav','a_ae_y-.wav','a_a_b-.wav','a_a_bl-.wav','a_a_br-.wav','a_a_c-.wav','a_a_ch-.wav','a_a_cl-.wav','a_a_cr-.wav','a_a_cv-.wav','a_a_cw-.wav','a_a_d-.wav','a_a_dr-.wav','a_a_eng_s-.wav','a_a_f-.wav','a_a_fl-.wav','a_a_fr-.wav','a_a_g-.wav','a_a_gl-.wav','a_a_gr-.wav','a_a_gv-.wav','a_a_gw-.wav','a_a_h-.wav','a_a_j-.wav','a_a_l-.wav','a_a_m-.wav','a_a_n-.wav','a_a_ng-.wav','a_a_p-.wav','a_a_ph-.wav','a_a_phl-.wav','a_a_phr-.wav','a_a_pl-.wav','a_a_pr-.wav','a_a_r-.wav','a_a_s-.wav','a_a_sr-.wav','a_a_t-.wav','a_a_th-.wav','a_a_thr-.wav','a_a_tr-.wav','a_a_v-.wav','a_a_y-.wav','a_ee_b-.wav','a_ee_bl-.wav','a_ee_br-.wav','a_ee_c-.wav','a_ee_ch-.wav','a_ee_cl-.wav','a_ee_cr-.wav','a_ee_cv-.wav','a_ee_cw-.wav','a_ee_d-.wav','a_ee_dr-.wav','a_ee_eng_s-.wav','a_ee_f-.wav','a_ee_fl-.wav','a_ee_fr-.wav','a_ee_g-.wav','a_ee_gl-.wav','a_ee_gr-.wav','a_ee_gw-.wav','a_ee_h-.wav','a_ee_j-.wav','a_ee_l-.wav','a_ee_m-.wav','a_ee_n-.wav','a_ee_ng-.wav','a_ee_p-.wav','a_ee_ph-.wav','a_ee_phl-.wav','a_ee_phr-.wav','a_ee_pl-.wav','a_ee_pr-.wav','a_ee_r-.wav','a_ee_s-.wav','a_ee_sr-.wav','a_ee_t-.wav','a_ee_th-.wav','a_ee_thr-.wav','a_ee_tr-.wav','a_ee_v-.wav','a_ee_y-.wav','a_er_b-.wav','a_er_bl-.wav','a_er_br-.wav','a_er_c-.wav','a_er_ch-.wav','a_er_cl-.wav','a_er_cr-.wav','a_er_cv-.wav','a_er_cw-.wav','a_er_d-.wav','a_er_dr-.wav','a_er_eng_s-.wav','a_er_f-.wav','a_er_fl-.wav','a_er_fr-.wav','a_er_g-.wav','a_er_gl-.wav','a_er_gr-.wav','a_er_gv-.wav','a_er_gw-.wav','a_er_h-.wav','a_er_j-.wav','a_er_l-.wav','a_er_m-.wav','a_er_n-.wav','a_er_ng-.wav','a_er_p-.wav','a_er_ph-.wav','a_er_phl-.wav','a_er_phr-.wav','a_er_pl-.wav','a_er_pr-.wav','a_er_r-.wav','a_er_s-.wav','a_er_sr-.wav','a_er_t-.wav','a_er_th-.wav','a_er_thr-.wav','a_er_tr-.wav','a_er_v-.wav','a_er_y-.wav','a_eua_b-.wav','a_eua_bl-.wav','a_eua_br-.wav','a_eua_c-.wav','a_eua_ch-.wav','a_eua_cl-.wav','a_eua_cr-.wav','a_eua_cv-.wav','a_eua_cw-.wav','a_eua_d-.wav','a_eua_dr-.wav','a_eua_f-.wav','a_eua_fl-.wav','a_eua_fr-.wav','a_eua_g-.wav','a_eua_gl-.wav','a_eua_gr-.wav','a_eua_gw-.wav','a_eua_h-.wav','a_eua_j-.wav','a_eua_l-.wav','a_eua_m-.wav','a_eua_n-.wav','a_eua_ng-.wav','a_eua_p-.wav','a_eua_ph-.wav','a_eua_phl-.wav','a_eua_phr-.wav','a_eua_pl-.wav','a_eua_pr-.wav','a_eua_r-.wav','a_eua_s-.wav','a_eua_sr-.wav','a_eua_t-.wav','a_eua_th-.wav','a_eua_thr-.wav','a_eua_tr-.wav','a_eua_v-.wav','a_eua_y-.wav','a_eu_b-.wav','a_eu_bl-.wav','a_eu_br-.wav','a_eu_c-.wav','a_eu_ch-.wav','a_eu_cl-.wav','a_eu_cr-.wav','a_eu_cv-.wav','a_eu_cw-.wav','a_eu_d-.wav','a_eu_dr-.wav','a_eu_f-.wav','a_eu_fl-.wav','a_eu_fr-.wav','a_eu_g-.wav','a_eu_gl-.wav','a_eu_gr-.wav','a_eu_gw-.wav','a_eu_h-.wav','a_eu_j-.wav','a_eu_l-.wav','a_eu_m-.wav','a_eu_n-.wav','a_eu_ng-.wav','a_eu_p-.wav','a_eu_ph-.wav','a_eu_phl-.wav','a_eu_phr-.wav','a_eu_pl-.wav','a_eu_pr-.wav','a_eu_r-.wav','a_eu_s-.wav','a_eu_sr-.wav','a_eu_t-.wav','a_eu_th-.wav','a_eu_thr-.wav','a_eu_tr-.wav','a_eu_v-.wav','a_eu_y-.wav','a_ia_b-.wav','a_ia_bl-.wav','a_ia_br-.wav','a_ia_c-.wav','a_ia_ch-.wav','a_ia_cl-.wav','a_ia_cr-.wav','a_ia_cv-.wav','a_ia_cw-.wav','a_ia_d-.wav','a_ia_dr-.wav','a_ia_eng_s-.wav','a_ia_f-.wav','a_ia_fl-.wav','a_ia_fr-.wav','a_ia_g-.wav','a_ia_gl-.wav','a_ia_gr-.wav','a_ia_gw-.wav','a_ia_h-.wav','a_ia_j-.wav','a_ia_l-.wav','a_ia_m-.wav','a_ia_n-.wav','a_ia_ng-.wav','a_ia_p-.wav','a_ia_ph-.wav','a_ia_phl-.wav','a_ia_phr-.wav','a_ia_pl-.wav','a_ia_pr-.wav','a_ia_r-.wav','a_ia_s-.wav','a_ia_sr-.wav','a_ia_t-.wav','a_ia_th-.wav','a_ia_thr-.wav','a_ia_tr-.wav','a_ia_v-.wav','a_ia_y-.wav','a_no_a-.wav','a_no_ae-.wav','a_no_ar-.wav','a_no_b-.wav','a_no_bl-.wav','a_no_br-.wav','a_no_c-.wav','a_no_ch-.wav','a_no_cl-.wav','a_no_cr-.wav','a_no_cv-.wav','a_no_cw-.wav','a_no_d-.wav','a_no_dr-.wav','a_no_ee-.wav','a_no_eng_s-.wav','a_no_er-.wav','a_no_eu-.wav','a_no_f-.wav','a_no_fl-.wav','a_no_fr-.wav','a_no_g-.wav','a_no_gl-.wav','a_no_gr-.wav','a_no_gv-.wav','a_no_gw-.wav','a_no_h-.wav','a_no_ia-.wav','a_no_j-.wav','a_no_l-.wav','a_no_m-.wav','a_no_n-.wav','a_no_ng-.wav','a_no_o-.wav','a_no_or-.wav','a_no_oua-.wav','a_no_p-.wav','a_no_ph-.wav','a_no_phl-.wav','a_no_phr-.wav','a_no_pl-.wav','a_no_pr-.wav','a_no_r-.wav','a_no_s-.wav','a_no_sr-.wav','a_no_t-.wav','a_no_th-.wav','a_no_thr-.wav','a_no_tr-.wav','a_no_u-.wav','a_no_ua-.wav','a_no_v-.wav','a_no_y-.wav','a_or_b-.wav','a_or_bl-.wav','a_or_br-.wav','a_or_c-.wav','a_or_ch-.wav','a_or_cl-.wav','a_or_cr-.wav','a_or_cv-.wav','a_or_cw-.wav','a_or_d-.wav','a_or_dr-.wav','a_or_eng_s-.wav','a_or_f-.wav','a_or_fl-.wav','a_or_fr-.wav','a_or_g-.wav','a_or_gl-.wav','a_or_gr-.wav','a_or_gw-.wav','a_or_h-.wav','a_or_j-.wav','a_or_l-.wav','a_or_m-.wav','a_or_n-.wav','a_or_ng-.wav','a_or_p-.wav','a_or_ph-.wav','a_or_phl-.wav','a_or_phr-.wav','a_or_pl-.wav','a_or_pr-.wav','a_or_r-.wav','a_or_s-.wav','a_or_sr-.wav','a_or_t-.wav','a_or_th-.wav','a_or_thr-.wav','a_or_tr-.wav','a_or_v-.wav','a_or_y-.wav','a_oua_b-.wav','a_oua_bl-.wav','a_oua_br-.wav','a_oua_c-.wav','a_oua_ch-.wav','a_oua_cl-.wav','a_oua_cr-.wav','a_oua_cv-.wav','a_oua_cw-.wav','a_oua_d-.wav','a_oua_dr-.wav','a_oua_f-.wav','a_oua_fl-.wav','a_oua_fr-.wav','a_oua_g-.wav','a_oua_gl-.wav','a_oua_gr-.wav','a_oua_gw-.wav','a_oua_h-.wav','a_oua_j-.wav','a_oua_l-.wav','a_oua_m-.wav','a_oua_n-.wav','a_oua_ng-.wav','a_oua_p-.wav','a_oua_ph-.wav','a_oua_phl-.wav','a_oua_phr-.wav','a_oua_pl-.wav','a_oua_pr-.wav','a_oua_r-.wav','a_oua_s-.wav','a_oua_sr-.wav','a_oua_t-.wav','a_oua_th-.wav','a_oua_thr-.wav','a_oua_tr-.wav','a_oua_v-.wav','a_oua_y-.wav','a_o_b-.wav','a_o_bl-.wav','a_o_br-.wav','a_o_c-.wav','a_o_ch-.wav','a_o_cl-.wav','a_o_cr-.wav','a_o_cv-.wav','a_o_cw-.wav','a_o_d-.wav','a_o_dr-.wav','a_o_eng_s-.wav','a_o_f-.wav','a_o_fl-.wav','a_o_fr-.wav','a_o_g-.wav','a_o_gl-.wav','a_o_gr-.wav','a_o_gv-.wav','a_o_gw-.wav','a_o_h-.wav','a_o_j-.wav','a_o_l-.wav','a_o_m-.wav','a_o_n-.wav','a_o_ng-.wav','a_o_p-.wav','a_o_ph-.wav','a_o_phl-.wav','a_o_phr-.wav','a_o_pl-.wav','a_o_pr-.wav','a_o_r-.wav','a_o_s-.wav','a_o_sr-.wav','a_o_t-.wav','a_o_th-.wav','a_o_thr-.wav','a_o_tr-.wav','a_o_v-.wav','a_o_y-.wav','a_ua_b-.wav','a_ua_bl-.wav','a_ua_br-.wav','a_ua_c-.wav','a_ua_ch-.wav','a_ua_cl-.wav','a_ua_cr-.wav','a_ua_cv-.wav','a_ua_cw-.wav','a_ua_d-.wav','a_ua_dr-.wav','a_ua_eng_s-.wav','a_ua_f-.wav','a_ua_fl-.wav','a_ua_fr-.wav','a_ua_g-.wav','a_ua_gl-.wav','a_ua_gr-.wav','a_ua_gv-.wav','a_ua_gw-.wav','a_ua_h-.wav','a_ua_j-.wav','a_ua_l-.wav','a_ua_m-.wav','a_ua_n-.wav','a_ua_ng-.wav','a_ua_p-.wav','a_ua_ph-.wav','a_ua_phl-.wav','a_ua_phr-.wav','a_ua_pl-.wav','a_ua_pr-.wav','a_ua_r-.wav','a_ua_s-.wav','a_ua_sr-.wav','a_ua_t-.wav','a_ua_th-.wav','a_ua_thr-.wav','a_ua_tr-.wav','a_ua_v-.wav','a_ua_y-.wav','a_u_b-.wav','a_u_bl-.wav','a_u_br-.wav','a_u_c-.wav','a_u_ch-.wav','a_u_cl-.wav','a_u_cr-.wav','a_u_cv-.wav','a_u_cw-.wav','a_u_d-.wav','a_u_dr-.wav','a_u_eng_s-.wav','a_u_f-.wav','a_u_fl-.wav','a_u_fr-.wav','a_u_g-.wav','a_u_gl-.wav','a_u_gr-.wav','a_u_gv-.wav','a_u_gw-.wav','a_u_h-.wav','a_u_j-.wav','a_u_l-.wav','a_u_m-.wav','a_u_n-.wav','a_u_ng-.wav','a_u_p-.wav','a_u_ph-.wav','a_u_phl-.wav','a_u_phr-.wav','a_u_pl-.wav','a_u_pr-.wav','a_u_r-.wav','a_u_s-.wav','a_u_sr-.wav','a_u_t-.wav','a_u_th-.wav','a_u_thr-.wav','a_u_tr-.wav','a_u_v-.wav','a_u_y-.wav']);
+genSelect("scsel2",['a_ae_b-.wav','a_ae_bl-.wav','a_ae_br-.wav','a_ae_c-.wav','a_ae_ch-.wav','a_ae_cl-.wav','a_ae_cr-.wav','a_ae_cv-.wav','a_ae_cw-.wav','a_ae_d-.wav','a_ae_dr-.wav','a_ae_eng_s-.wav','a_ae_f-.wav','a_ae_fl-.wav','a_ae_fr-.wav','a_ae_g-.wav','a_ae_gl-.wav','a_ae_gr-.wav','a_ae_gv-.wav','a_ae_gw-.wav','a_ae_h-.wav','a_ae_j-.wav','a_ae_l-.wav','a_ae_m-.wav','a_ae_n-.wav','a_ae_ng-.wav','a_ae_p-.wav','a_ae_ph-.wav','a_ae_phl-.wav','a_ae_phr-.wav','a_ae_pl-.wav','a_ae_pr-.wav','a_ae_r-.wav','a_ae_s-.wav','a_ae_sr-.wav','a_ae_t-.wav','a_ae_th-.wav','a_ae_thr-.wav','a_ae_tr-.wav','a_ae_v-.wav','a_ae_y-.wav','a_a_b-.wav','a_a_bl-.wav','a_a_br-.wav','a_a_c-.wav','a_a_ch-.wav','a_a_cl-.wav','a_a_cr-.wav','a_a_cv-.wav','a_a_cw-.wav','a_a_d-.wav','a_a_dr-.wav','a_a_eng_s-.wav','a_a_f-.wav','a_a_fl-.wav','a_a_fr-.wav','a_a_g-.wav','a_a_gl-.wav','a_a_gr-.wav','a_a_gv-.wav','a_a_gw-.wav','a_a_h-.wav','a_a_j-.wav','a_a_l-.wav','a_a_m-.wav','a_a_n-.wav','a_a_ng-.wav','a_a_p-.wav','a_a_ph-.wav','a_a_phl-.wav','a_a_phr-.wav','a_a_pl-.wav','a_a_pr-.wav','a_a_r-.wav','a_a_s-.wav','a_a_sr-.wav','a_a_t-.wav','a_a_th-.wav','a_a_thr-.wav','a_a_tr-.wav','a_a_v-.wav','a_a_y-.wav','a_ee_b-.wav','a_ee_bl-.wav','a_ee_br-.wav','a_ee_c-.wav','a_ee_ch-.wav','a_ee_cl-.wav','a_ee_cr-.wav','a_ee_cv-.wav','a_ee_cw-.wav','a_ee_d-.wav','a_ee_dr-.wav','a_ee_eng_s-.wav','a_ee_f-.wav','a_ee_fl-.wav','a_ee_fr-.wav','a_ee_g-.wav','a_ee_gl-.wav','a_ee_gr-.wav','a_ee_gw-.wav','a_ee_h-.wav','a_ee_j-.wav','a_ee_l-.wav','a_ee_m-.wav','a_ee_n-.wav','a_ee_ng-.wav','a_ee_p-.wav','a_ee_ph-.wav','a_ee_phl-.wav','a_ee_phr-.wav','a_ee_pl-.wav','a_ee_pr-.wav','a_ee_r-.wav','a_ee_s-.wav','a_ee_sr-.wav','a_ee_t-.wav','a_ee_th-.wav','a_ee_thr-.wav','a_ee_tr-.wav','a_ee_v-.wav','a_ee_y-.wav','a_er_b-.wav','a_er_bl-.wav','a_er_br-.wav','a_er_c-.wav','a_er_ch-.wav','a_er_cl-.wav','a_er_cr-.wav','a_er_cv-.wav','a_er_cw-.wav','a_er_d-.wav','a_er_dr-.wav','a_er_eng_s-.wav','a_er_f-.wav','a_er_fl-.wav','a_er_fr-.wav','a_er_g-.wav','a_er_gl-.wav','a_er_gr-.wav','a_er_gv-.wav','a_er_gw-.wav','a_er_h-.wav','a_er_j-.wav','a_er_l-.wav','a_er_m-.wav','a_er_n-.wav','a_er_ng-.wav','a_er_p-.wav','a_er_ph-.wav','a_er_phl-.wav','a_er_phr-.wav','a_er_pl-.wav','a_er_pr-.wav','a_er_r-.wav','a_er_s-.wav','a_er_sr-.wav','a_er_t-.wav','a_er_th-.wav','a_er_thr-.wav','a_er_tr-.wav','a_er_v-.wav','a_er_y-.wav','a_eua_b-.wav','a_eua_bl-.wav','a_eua_br-.wav','a_eua_c-.wav','a_eua_ch-.wav','a_eua_cl-.wav','a_eua_cr-.wav','a_eua_cv-.wav','a_eua_cw-.wav','a_eua_d-.wav','a_eua_dr-.wav','a_eua_f-.wav','a_eua_fl-.wav','a_eua_fr-.wav','a_eua_g-.wav','a_eua_gl-.wav','a_eua_gr-.wav','a_eua_gw-.wav','a_eua_h-.wav','a_eua_j-.wav','a_eua_l-.wav','a_eua_m-.wav','a_eua_n-.wav','a_eua_ng-.wav','a_eua_p-.wav','a_eua_ph-.wav','a_eua_phl-.wav','a_eua_phr-.wav','a_eua_pl-.wav','a_eua_pr-.wav','a_eua_r-.wav','a_eua_s-.wav','a_eua_sr-.wav','a_eua_t-.wav','a_eua_th-.wav','a_eua_thr-.wav','a_eua_tr-.wav','a_eua_v-.wav','a_eua_y-.wav','a_eu_b-.wav','a_eu_bl-.wav','a_eu_br-.wav','a_eu_c-.wav','a_eu_ch-.wav','a_eu_cl-.wav','a_eu_cr-.wav','a_eu_cv-.wav','a_eu_cw-.wav','a_eu_d-.wav','a_eu_dr-.wav','a_eu_f-.wav','a_eu_fl-.wav','a_eu_fr-.wav','a_eu_g-.wav','a_eu_gl-.wav','a_eu_gr-.wav','a_eu_gw-.wav','a_eu_h-.wav','a_eu_j-.wav','a_eu_l-.wav','a_eu_m-.wav','a_eu_n-.wav','a_eu_ng-.wav','a_eu_p-.wav','a_eu_ph-.wav','a_eu_phl-.wav','a_eu_phr-.wav','a_eu_pl-.wav','a_eu_pr-.wav','a_eu_r-.wav','a_eu_s-.wav','a_eu_sr-.wav','a_eu_t-.wav','a_eu_th-.wav','a_eu_thr-.wav','a_eu_tr-.wav','a_eu_v-.wav','a_eu_y-.wav','a_ia_b-.wav','a_ia_bl-.wav','a_ia_br-.wav','a_ia_c-.wav','a_ia_ch-.wav','a_ia_cl-.wav','a_ia_cr-.wav','a_ia_cv-.wav','a_ia_cw-.wav','a_ia_d-.wav','a_ia_dr-.wav','a_ia_eng_s-.wav','a_ia_f-.wav','a_ia_fl-.wav','a_ia_fr-.wav','a_ia_g-.wav','a_ia_gl-.wav','a_ia_gr-.wav','a_ia_gw-.wav','a_ia_h-.wav','a_ia_j-.wav','a_ia_l-.wav','a_ia_m-.wav','a_ia_n-.wav','a_ia_ng-.wav','a_ia_p-.wav','a_ia_ph-.wav','a_ia_phl-.wav','a_ia_phr-.wav','a_ia_pl-.wav','a_ia_pr-.wav','a_ia_r-.wav','a_ia_s-.wav','a_ia_sr-.wav','a_ia_t-.wav','a_ia_th-.wav','a_ia_thr-.wav','a_ia_tr-.wav','a_ia_v-.wav','a_ia_y-.wav','a_no_a-.wav','a_no_ae-.wav','a_no_ar-.wav','a_no_b-.wav','a_no_bl-.wav','a_no_br-.wav','a_no_c-.wav','a_no_ch-.wav','a_no_cl-.wav','a_no_cr-.wav','a_no_cv-.wav','a_no_cw-.wav','a_no_d-.wav','a_no_dr-.wav','a_no_ee-.wav','a_no_eng_s-.wav','a_no_er-.wav','a_no_eu-.wav','a_no_f-.wav','a_no_fl-.wav','a_no_fr-.wav','a_no_g-.wav','a_no_gl-.wav','a_no_gr-.wav','a_no_gv-.wav','a_no_gw-.wav','a_no_h-.wav','a_no_ia-.wav','a_no_j-.wav','a_no_l-.wav','a_no_m-.wav','a_no_n-.wav','a_no_ng-.wav','a_no_o-.wav','a_no_or-.wav','a_no_oua-.wav','a_no_p-.wav','a_no_ph-.wav','a_no_phl-.wav','a_no_phr-.wav','a_no_pl-.wav','a_no_pr-.wav','a_no_r-.wav','a_no_s-.wav','a_no_sr-.wav','a_no_t-.wav','a_no_th-.wav','a_no_thr-.wav','a_no_tr-.wav','a_no_u-.wav','a_no_ua-.wav','a_no_v-.wav','a_no_y-.wav','a_or_b-.wav','a_or_bl-.wav','a_or_br-.wav','a_or_c-.wav','a_or_ch-.wav','a_or_cl-.wav','a_or_cr-.wav','a_or_cv-.wav','a_or_cw-.wav','a_or_d-.wav','a_or_dr-.wav','a_or_eng_s-.wav','a_or_f-.wav','a_or_fl-.wav','a_or_fr-.wav','a_or_g-.wav','a_or_gl-.wav','a_or_gr-.wav','a_or_gw-.wav','a_or_h-.wav','a_or_j-.wav','a_or_l-.wav','a_or_m-.wav','a_or_n-.wav','a_or_ng-.wav','a_or_p-.wav','a_or_ph-.wav','a_or_phl-.wav','a_or_phr-.wav','a_or_pl-.wav','a_or_pr-.wav','a_or_r-.wav','a_or_s-.wav','a_or_sr-.wav','a_or_t-.wav','a_or_th-.wav','a_or_thr-.wav','a_or_tr-.wav','a_or_v-.wav','a_or_y-.wav','a_oua_b-.wav','a_oua_bl-.wav','a_oua_br-.wav','a_oua_c-.wav','a_oua_ch-.wav','a_oua_cl-.wav','a_oua_cr-.wav','a_oua_cv-.wav','a_oua_cw-.wav','a_oua_d-.wav','a_oua_dr-.wav','a_oua_f-.wav','a_oua_fl-.wav','a_oua_fr-.wav','a_oua_g-.wav','a_oua_gl-.wav','a_oua_gr-.wav','a_oua_gw-.wav','a_oua_h-.wav','a_oua_j-.wav','a_oua_l-.wav','a_oua_m-.wav','a_oua_n-.wav','a_oua_ng-.wav','a_oua_p-.wav','a_oua_ph-.wav','a_oua_phl-.wav','a_oua_phr-.wav','a_oua_pl-.wav','a_oua_pr-.wav','a_oua_r-.wav','a_oua_s-.wav','a_oua_sr-.wav','a_oua_t-.wav','a_oua_th-.wav','a_oua_thr-.wav','a_oua_tr-.wav','a_oua_v-.wav','a_oua_y-.wav','a_o_b-.wav','a_o_bl-.wav','a_o_br-.wav','a_o_c-.wav','a_o_ch-.wav','a_o_cl-.wav','a_o_cr-.wav','a_o_cv-.wav','a_o_cw-.wav','a_o_d-.wav','a_o_dr-.wav','a_o_eng_s-.wav','a_o_f-.wav','a_o_fl-.wav','a_o_fr-.wav','a_o_g-.wav','a_o_gl-.wav','a_o_gr-.wav','a_o_gv-.wav','a_o_gw-.wav','a_o_h-.wav','a_o_j-.wav','a_o_l-.wav','a_o_m-.wav','a_o_n-.wav','a_o_ng-.wav','a_o_p-.wav','a_o_ph-.wav','a_o_phl-.wav','a_o_phr-.wav','a_o_pl-.wav','a_o_pr-.wav','a_o_r-.wav','a_o_s-.wav','a_o_sr-.wav','a_o_t-.wav','a_o_th-.wav','a_o_thr-.wav','a_o_tr-.wav','a_o_v-.wav','a_o_y-.wav','a_ua_b-.wav','a_ua_bl-.wav','a_ua_br-.wav','a_ua_c-.wav','a_ua_ch-.wav','a_ua_cl-.wav','a_ua_cr-.wav','a_ua_cv-.wav','a_ua_cw-.wav','a_ua_d-.wav','a_ua_dr-.wav','a_ua_eng_s-.wav','a_ua_f-.wav','a_ua_fl-.wav','a_ua_fr-.wav','a_ua_g-.wav','a_ua_gl-.wav','a_ua_gr-.wav','a_ua_gv-.wav','a_ua_gw-.wav','a_ua_h-.wav','a_ua_j-.wav','a_ua_l-.wav','a_ua_m-.wav','a_ua_n-.wav','a_ua_ng-.wav','a_ua_p-.wav','a_ua_ph-.wav','a_ua_phl-.wav','a_ua_phr-.wav','a_ua_pl-.wav','a_ua_pr-.wav','a_ua_r-.wav','a_ua_s-.wav','a_ua_sr-.wav','a_ua_t-.wav','a_ua_th-.wav','a_ua_thr-.wav','a_ua_tr-.wav','a_ua_v-.wav','a_ua_y-.wav','a_u_b-.wav','a_u_bl-.wav','a_u_br-.wav','a_u_c-.wav','a_u_ch-.wav','a_u_cl-.wav','a_u_cr-.wav','a_u_cv-.wav','a_u_cw-.wav','a_u_d-.wav','a_u_dr-.wav','a_u_eng_s-.wav','a_u_f-.wav','a_u_fl-.wav','a_u_fr-.wav','a_u_g-.wav','a_u_gl-.wav','a_u_gr-.wav','a_u_gv-.wav','a_u_gw-.wav','a_u_h-.wav','a_u_j-.wav','a_u_l-.wav','a_u_m-.wav','a_u_n-.wav','a_u_ng-.wav','a_u_p-.wav','a_u_ph-.wav','a_u_phl-.wav','a_u_phr-.wav','a_u_pl-.wav','a_u_pr-.wav','a_u_r-.wav','a_u_s-.wav','a_u_sr-.wav','a_u_t-.wav','a_u_th-.wav','a_u_thr-.wav','a_u_tr-.wav','a_u_v-.wav','a_u_y-.wav']);
+genSelect("svsel",['b_ae_-b.wav','b_ae_-d.wav','b_ae_-eng_l.wav','b_ae_-eng_s.wav','b_ae_-k.wav','b_ae_-m.wav','b_ae_-n.wav','b_ae_-ng.wav','b_ae_-w.wav','b_a_-b.wav','b_a_-d.wav','b_a_-eng_l.wav','b_a_-eng_s.wav','b_a_-k.wav','b_a_-m.wav','b_a_-n.wav','b_a_-ng.wav','b_a_-w.wav','b_ee_-b.wav','b_ee_-d.wav','b_ee_-eng_l.wav','b_ee_-eng_s.wav','b_ee_-k.wav','b_ee_-m.wav','b_ee_-n.wav','b_ee_-ng.wav','b_ee_-w.wav','b_er_-b.wav','b_er_-d.wav','b_er_-eng_l.wav','b_er_-eng_s.wav','b_er_-k.wav','b_er_-m.wav','b_er_-n.wav','b_er_-ng.wav','b_er_-w.wav','b_er_-y.wav','b_eua_-a.wav','b_eua_-ae.wav','b_eua_-b.wav','b_eua_-d.wav','b_eua_-ee.wav','b_eua_-eng_l.wav','b_eua_-eng_s.wav','b_eua_-er.wav','b_eua_-eu.wav','b_eua_-ia.wav','b_eua_-k.wav','b_eua_-m.wav','b_eua_-n.wav','b_eua_-ng.wav','b_eua_-o.wav','b_eua_-or.wav','b_eua_-oua.wav','b_eua_-u.wav','b_eua_-ua.wav','b_eua_-w.wav','b_eua_-y.wav','b_eu_-b.wav','b_eu_-d.wav','b_eu_-k.wav','b_eu_-m.wav','b_eu_-n.wav','b_eu_-ng.wav','b_eu_-w.wav','b_eu_-y.wav','b_ia_-a.wav','b_ia_-ae.wav','b_ia_-b.wav','b_ia_-d.wav','b_ia_-ee.wav','b_ia_-eng_l.wav','b_ia_-eng_s.wav','b_ia_-er.wav','b_ia_-eu.wav','b_ia_-ia.wav','b_ia_-k.wav','b_ia_-m.wav','b_ia_-n.wav','b_ia_-ng.wav','b_ia_-o.wav','b_ia_-or.wav','b_ia_-oua.wav','b_ia_-u.wav','b_ia_-ua.wav','b_ia_-w.wav','b_ia_-y.wav','b_no_-a.wav','b_no_-ae.wav','b_no_-ar.wav','b_no_-b.wav','b_no_-d.wav','b_no_-ee.wav','b_no_-eng_l.wav','b_no_-eng_s.wav','b_no_-er.wav','b_no_-eu.wav','b_no_-ia.wav','b_no_-k.wav','b_no_-m.wav','b_no_-n.wav','b_no_-ng.wav','b_no_-o.wav','b_no_-or.wav','b_no_-oua.wav','b_no_-u.wav','b_no_-ua.wav','b_no_-w.wav','b_no_-y.wav','b_or_-b.wav','b_or_-d.wav','b_or_-eng_l.wav','b_or_-eng_s.wav','b_or_-k.wav','b_or_-m.wav','b_or_-n.wav','b_or_-ng.wav','b_or_-w.wav','b_or_-y.wav','b_oua_-a.wav','b_oua_-ae.wav','b_oua_-b.wav','b_oua_-d.wav','b_oua_-ee.wav','b_oua_-eng_l.wav','b_oua_-eng_s.wav','b_oua_-er.wav','b_oua_-eu.wav','b_oua_-ia.wav','b_oua_-k.wav','b_oua_-m.wav','b_oua_-n.wav','b_oua_-ng.wav','b_oua_-o.wav','b_oua_-or.wav','b_oua_-oua.wav','b_oua_-u.wav','b_oua_-ua.wav','b_oua_-w.wav','b_oua_-y.wav','b_o_-b.wav','b_o_-d.wav','b_o_-eng_l.wav','b_o_-eng_s.wav','b_o_-k.wav','b_o_-m.wav','b_o_-n.wav','b_o_-ng.wav','b_o_-w.wav','b_o_-y.wav','b_ua_-a.wav','b_ua_-ae.wav','b_ua_-b.wav','b_ua_-d.wav','b_ua_-ee.wav','b_ua_-eng_l.wav','b_ua_-eng_s.wav','b_ua_-er.wav','b_ua_-eu.wav','b_ua_-ia.wav','b_ua_-k.wav','b_ua_-m.wav','b_ua_-n.wav','b_ua_-ng.wav','b_ua_-o.wav','b_ua_-or.wav','b_ua_-oua.wav','b_ua_-u.wav','b_ua_-ua.wav','b_ua_-w.wav','b_ua_-y.wav','b_u_-b.wav','b_u_-d.wav','b_u_-eng_l.wav','b_u_-eng_s.wav','b_u_-k.wav','b_u_-m.wav','b_u_-n.wav','b_u_-ng.wav','b_u_-w.wav','b_u_-y.wav']);
+genSelect("vsel",['v_-a-.wav','v_-ae-.wav','v_-ar-.wav','v_-ee-.wav','v_-er-.wav','v_-eu-.wav','v_-ia-.wav','v_-o-.wav','v_-or-.wav','v_-oua-.wav','v_-u-.wav','v_-ua-.wav']);
+genSelect("fsel",['t_ae_--m.wav','t_ae_--n.wav','t_ae_--ng.wav','t_a_--m.wav','t_a_--n.wav','t_a_--ng.wav','t_ee_--m.wav','t_ee_--n.wav','t_ee_--ng.wav','t_er_--m.wav','t_er_--n.wav','t_er_--ng.wav','t_eua_--m.wav','t_eua_--n.wav','t_eua_--ng.wav','t_eu_--m.wav','t_eu_--n.wav','t_eu_--ng.wav','t_ia_--m.wav','t_ia_--n.wav','t_ia_--ng.wav','t_no_--m.wav','t_no_--n.wav','t_no_--ng.wav','t_or_--m.wav','t_or_--n.wav','t_or_--ng.wav','t_oua_--m.wav','t_oua_--n.wav','t_oua_--ng.wav','t_o_--m.wav','t_o_--n.wav','t_o_--ng.wav','t_ua_--m.wav','t_ua_--n.wav','t_ua_--ng.wav','t_u_--m.wav','t_u_--n.wav','t_u_--ng.wav']);
+genSelect("tsel",['tone_long_no_b_ake.wav','tone_long_no_b_jutthawa.wav','tone_long_no_b_samun.wav','tone_long_no_b_tho.wav','tone_long_no_b_three.wav','tone_long_no_b__samun.wav']);
+
+ 
+</script>
+</htl>
